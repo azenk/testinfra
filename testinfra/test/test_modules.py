@@ -276,6 +276,22 @@ def test_ansible_module(TestinfraBackend, Ansible):
     assert variables["inventory_hostname"] == "debian_jessie"
     assert variables["group_names"] == ["ungrouped"]
 
+    # test errors reporting
+    with pytest.raises(Ansible.AnsibleException) as excinfo:
+        Ansible("file", "path=/etc/passwd an_unexpected=variable")
+    tb = str(excinfo.value)
+    assert 'unsupported parameter for module: an_unexpected' in tb
+
+    with pytest.raises(Ansible.AnsibleException) as excinfo:
+        Ansible("command", "zzz")
+    assert excinfo.value.result['msg'] == 'skipped. You might want try check=False'
+
+    try:
+        Ansible("command", "zzz", check=False)
+    except Ansible.AnsibleException as exc:
+        assert exc.result['rc'] == 2
+        assert exc.result['msg'] == '[Errno 2] No such file or directory'
+
 
 @pytest.mark.destructive
 def test_supervisor(Command, Service, Supervisor, Process):

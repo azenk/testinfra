@@ -14,8 +14,26 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import pprint
 
 from testinfra.modules.base import InstanceModule
+
+
+class AnsibleException(Exception):
+    """Exception raised when an error occur in a ansible call
+
+    result from ansible can be accessed through the ``result`` attribute
+
+    >>> try:
+    ...     Ansible("command", "zzz")
+    ... except Ansible.AnsibleException as exc:
+            assert exc.result['failed'] is True
+    """
+
+    def __init__(self, result):
+        self.result = result
+        super(AnsibleException, self).__init__(
+            "Unexpected error: {}".format(pprint.pformat(result)))
 
 
 class Ansible(InstanceModule):
@@ -36,14 +54,18 @@ class Ansible(InstanceModule):
     '0640'
 
     """
+    AnsibleException = AnsibleException
 
     def __call__(self, module_name, module_args=None, check=True, **kwargs):
         if not self._backend.HAS_RUN_ANSIBLE:
             raise RuntimeError((
                 "Ansible module is only available with ansible "
                 "connection backend"))
-        return self._backend.run_ansible(
+        result = self._backend.run_ansible(
             module_name, module_args, check=check, **kwargs)
+        if result.get("failed", False) is True:
+            raise AnsibleException(result)
+        return result
 
     def get_variables(self):
         """Returns a dict of ansible variables
