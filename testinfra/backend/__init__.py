@@ -16,26 +16,22 @@ from __future__ import unicode_literals
 from six.moves import urllib
 
 from testinfra.backend import ansible
+from testinfra.backend import base
 from testinfra.backend import docker
 from testinfra.backend import local
 from testinfra.backend import paramiko
 from testinfra.backend import salt
 from testinfra.backend import ssh
 
-BACKENDS = dict((klass.get_connection_type(), klass) for klass in (
-    local.LocalBackend,
-    ssh.SshBackend,
-    ssh.SafeSshBackend,
-    paramiko.ParamikoBackend,
-    salt.SaltBackend,
-    docker.DockerBackend,
-    ansible.AnsibleBackend,
-))
-
 
 def get_backend_class(connection):
     try:
-        return BACKENDS[connection]
+        def all_subclasses(cls):
+            return cls.__subclasses__() + [g for s in cls.__subclasses__()
+                                           for g in all_subclasses(s)]
+        backends = dict((klass.get_connection_type(), klass)
+                        for klass in all_subclasses(base.BaseBackend))
+        return backends[connection]
     except KeyError:
         raise RuntimeError("Unknown connection type '%s'" % (connection,))
 
