@@ -23,6 +23,8 @@ from testinfra.backend import paramiko
 from testinfra.backend import salt
 from testinfra.backend import ssh
 
+backend_implmentations = [ansible, docker, local, paramiko, salt, ssh]
+
 
 def get_backend_class(connection):
     try:
